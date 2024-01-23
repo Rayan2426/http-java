@@ -12,6 +12,8 @@ import java.net.Socket;
 import java.util.Date;
 import java.util.Scanner;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class Main {
     public static void main(String[] args) {
         try {
@@ -34,10 +36,13 @@ public class Main {
     public static String getPath(String str){
 
         String file_path = str.split(" ")[1];
-        String result = "./httprequest/site";
-        file_path = file_path.equals("/") ? "/index.html" : file_path;
-
-        return result + file_path;
+        String main = "./httprequest/site";
+        switch(file_path){
+            case("/"):
+                file_path = "/index.html";
+                break;
+        }
+        return main + file_path;
     }
 
     public static String getTypeFromPath(String path){
@@ -48,6 +53,7 @@ public class Main {
         //System.out.println("GRANDEZZA: " + ext.split("\\.").length + "\n");
         ext = ext.split("\\.").length < 1 ? ".html" : ext.split("\\.")[1];
         //System.out.println("EXT DOPO: " + ext + "\n");
+        System.out.println("EXT: " + ext);
         switch (ext) {
             case ("html"):
                 result = "text/html";
@@ -69,6 +75,9 @@ public class Main {
                 break;
             case ("jpeg"):
                 result = "image/jpeg";
+                break;
+            case ("json"):
+                result = "application/json";
                 break;
             default:
                 result = "text/html";
@@ -98,17 +107,19 @@ public class Main {
     }
 
     public static void sendResponse(PrintWriter out, BufferedReader in, DataOutputStream outbytes){
+        
         try {
             String str = in.readLine();
             System.out.println(str);
             String file_path = getPath(str);
             String type = getTypeFromPath(file_path);
             System.out.println("Path: \"" + file_path + "\"\n");
-            
-            File file = new File(file_path);
+            System.out.println("Type: \"" + type + "\"\n");
+            File file;
             long datalength = 0;
             String data = "";
             if(type.startsWith("text")){
+                file = new File(file_path);
                 Scanner reader = new Scanner(file);
                 do{
                     str = in.readLine();
@@ -123,7 +134,19 @@ public class Main {
                 datalength = data.length();
                 reader.close();
             }
+            else if(type.endsWith("json")){
+                Aula aula = new Aula("5DIA");
+                aula.addAlunno("Marco","Deng","23/07/2005");
+                aula.addAlunno("Luigi","Socci","2/03/2004");
+                aula.addAlunno("Anatolie","Gonzales","13/12/2012");
+                aula.addAlunno("Rayan","Einstein","21/07/2005");
+                aula.addAlunno("Lorenzo","Turing","31/05/2001");
+                ObjectMapper jsoner = new ObjectMapper();
+                data = jsoner.writeValueAsString(aula);
+                datalength = data.length();
+            }
             else{
+                file = new File(file_path);
                 datalength = file.length() ;
             }
 
@@ -141,11 +164,12 @@ public class Main {
             System.out.println();
             out.println();
 
-            if(type.startsWith("text")){
+            if(!type.startsWith("image")){
                 out.println(data);
                 out.flush();
             }
             else{
+                file = new File(file_path);
                 sendBinaryFile(outbytes, file);
             }
 
